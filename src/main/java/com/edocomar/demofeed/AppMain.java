@@ -8,6 +8,10 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.edocomar.demofeed.api.ArticlesApi;
+import com.edocomar.demofeed.api.FeedsApi;
+import com.edocomar.demofeed.api.SubscriptionsApi;
+
 /**
  * Main class starting an embedded Jetty Server.
  * 
@@ -19,12 +23,17 @@ public class AppMain {
 	private Server jettyServer;
 
 	/**
-	 * @param args - args[0] port
+	 * @param args[0] property filename
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
+		if(args.length != 1) {
+			System.err.println("Missing required argument.\nUSAGE: java ... AppMain propertiesFilename");
+			System.exit(1);
+		}
 		
-		String propFile = args.length > 0 ? args[0] : "demofeed.properties";
+		String propFile = args[0];
+		
 		AppConfig appConfig = new AppConfig(propFile);
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -54,15 +63,22 @@ public class AppMain {
 	}
 
 	public AppMain (AppConfig appConfig) throws Exception { 
-		ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
-		context.setContextPath("/");
 
-		RootResource resource = new RootResource();
+		RootResource rootResource = new RootResource();
+		ArticlesApi articlesApi = new ArticlesApi();
+		FeedsApi feedsApi = new FeedsApi();
+		SubscriptionsApi subscriptionsApi = new SubscriptionsApi();
+
 		ResourceConfig rc = new ResourceConfig();
-		rc.register(resource);
+		rc.register(rootResource);
+		rc.register(articlesApi);
+		rc.register(feedsApi);
+		rc.register(subscriptionsApi);
 
 		ServletContainer sc = new ServletContainer(rc);
 		ServletHolder holder = new ServletHolder(sc);
+		ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
+		context.setContextPath("/");
 		context.addServlet(holder, "/*");
 
 		jettyServer = new Server(appConfig.getPort());

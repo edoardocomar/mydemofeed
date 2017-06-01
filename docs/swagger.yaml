@@ -1,0 +1,163 @@
+swagger: '2.0'
+info:
+  version: 0.1.0
+  title: My Demo Feed API
+host: localhost
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /subscriptions/{user}/{feed}:
+    post:
+      description: Subscribe a user to a feed.
+        Creates the user if needed and adds the feed to him/her if the feed is defined.
+        (required operation #1)
+      parameters:
+        - name: user
+          in: path
+          required: true
+          type: string
+        - name: feed
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK (subscription may already exist)
+        '201':
+          description: OK subscription (and possibly user) created
+        '400':
+          description: Feed does not exist
+        '500':
+          description: Unexpected Error
+    delete:
+      description: Unsubscribe a user from a feed.
+        (required operation #1)
+      parameters:
+        - name: user
+          in: path
+          required: true
+          type: string
+        - name: feed
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: user or feed does not exist
+        '500':
+          description: Unexpected Error
+  /subscriptions:
+    get:
+      description: returns list of known users
+        (not req)
+      responses:
+        '200':
+          description: return list of feeds
+          schema:
+            type: array
+            items:
+              type: string
+        '500':
+          description: Unexpected Error
+  /subscriptions/{user}:
+    get:
+      description: return list of feeds the user is subscribed to.
+        (required operation #3)
+      parameters:
+        - name: user
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: return list of feeds for user
+          schema:
+            type: array
+            items:
+              type: string
+        '404':
+          description: user does not exist
+        '500':
+          description: Unexpected Error
+  /feeds:
+    get:
+      description: returns list of defined feeds
+        (not req)
+      responses:
+        '200':
+          description: return list of feeds
+          schema:
+            type: array
+            items:
+              type: string
+        '500':
+          description: Unexpected Error
+  /feeds/{feed}:
+    post:
+      description: add articles to a feed 
+        (required operation #2)
+      parameters:
+        - name: feed
+          in: path
+          required: true
+          type: string
+        - name: articles
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/article'
+      responses:
+        '201':
+          description: OK article added
+        '400':
+          description: inavlid input data
+        '404':
+          description: feed does not exist
+        '500':
+          description: Unexpected Error
+  /articles/{user}:
+    get:
+      description: get list of new articles for feeds a user is subscribed to 
+        (required operation #4)
+      parameters:
+        - name: user
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK 
+          schema:
+            type: array
+            items: 
+              $ref: '#/definitions/feedArticles'
+        '404':
+          description: user does not exist
+        '500':
+          description: Unexpected Error
+definitions:
+  article:
+    type: object
+    properties:
+      title:
+        type: string
+      content:
+        description: base64 encoded content of article
+        type: string
+  feedArticles:
+    type: object
+    properties:
+      feed:
+        type: string
+      articles:
+        type: array
+        items:
+              $ref: '#/definitions/article'
