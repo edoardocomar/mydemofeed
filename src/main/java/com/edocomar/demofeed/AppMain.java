@@ -64,11 +64,14 @@ public class AppMain {
 
 	public AppMain (AppConfig appConfig) throws Exception { 
 
+		AppContext appContext = new AppContextImpl(appConfig);
+		
 		RootResource rootResource = new RootResource();
-		ArticlesApi articlesApi = new ArticlesApi();
-		FeedsApi feedsApi = new FeedsApi();
-		SubscriptionsApi subscriptionsApi = new SubscriptionsApi();
+		ArticlesApi articlesApi = new ArticlesApi(appContext);
+		FeedsApi feedsApi = new FeedsApi(appContext);
+		SubscriptionsApi subscriptionsApi = new SubscriptionsApi(appContext);
 
+		// construct an embedded Jetty Server with Jersey Jax-RS 
 		ResourceConfig rc = new ResourceConfig();
 		rc.register(rootResource);
 		rc.register(articlesApi);

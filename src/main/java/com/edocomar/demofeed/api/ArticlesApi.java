@@ -2,30 +2,39 @@ package com.edocomar.demofeed.api;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.edocomar.demofeed.AppContext;
 import com.edocomar.demofeed.model.Article;
+import com.edocomar.demofeed.model.ErrorMessage;
 import com.edocomar.demofeed.model.FeedArticles;
 
 
 @Path("/articles")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJAXRSSpecServerCodegen", date = "2017-06-01T12:04:23.300Z")
-
-
 public class ArticlesApi  {
-	private static final Logger logger = LoggerFactory.getLogger(ArticlesApi.class);	
+	@SuppressWarnings("unused")
+	private static final Logger logger = LoggerFactory.getLogger(ArticlesApi.class);
+	private AppContext appContext;	
 
+	public ArticlesApi(AppContext appContext) {
+		this.appContext = appContext;
+	}
+	
 	@GET
 	@Path("/{user}")
 	/**
@@ -38,13 +47,20 @@ public class ArticlesApi  {
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<FeedArticles> articlesUserGet(@PathParam("user") String user) {
 		
+		Set<String> subscriptions = appContext.subscriptions().get(user);
+		if (subscriptions == null) {
+			Response response = Response.status(Status.NOT_FOUND).entity(new ErrorMessage("User " + user + " not found")).build();
+			throw new NotFoundException(response);
+		}
+		
 		List<FeedArticles> result = new ArrayList<>();
-		FeedArticles feed1 = new FeedArticles();
-		feed1.setFeed("feed1");
-		Article a1 = new Article();
-		a1.setTitle("title1");
-		a1.setContent("content1");
-		feed1.getArticles().add(a1);
+		for (String feed : subscriptions) {
+			FeedArticles feedArticles = new FeedArticles();
+			feedArticles.setFeed(feed);
+			List<Article> articles = appContext.articles().get(feed);
+			feedArticles.getArticles().addAll(articles);
+			result.add(feedArticles);
+		}
 
 		return result;
 	}

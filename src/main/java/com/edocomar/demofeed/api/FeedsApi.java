@@ -1,7 +1,8 @@
 package com.edocomar.demofeed.api;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -11,20 +12,40 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.edocomar.demofeed.AppContext;
 import com.edocomar.demofeed.model.Article;
+import com.edocomar.demofeed.model.ErrorMessage;
 
 
 @Path("/feeds")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJAXRSSpecServerCodegen", date = "2017-06-01T12:04:23.300Z")
 public class FeedsApi  {
-	private static final Logger logger = LoggerFactory.getLogger(FeedsApi.class);	
+	@SuppressWarnings("unused")
+	private static final Logger logger = LoggerFactory.getLogger(FeedsApi.class);
+	private final AppContext appContext;	
 
+	public FeedsApi(AppContext appContext) {
+		this.appContext = appContext;
+	}
+	
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	/**
+    @ApiOperation(value = "", notes = "returns list of defined feeds (not req)", response = String.class, responseContainer = "List", tags={  })
+    @ApiResponses(value = { 
+        @ApiResponse(code = 200, message = "return list of feeds", response = String.class, responseContainer = "List"),
+        @ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
+	 */
+	public Set<String> feedsGet() {
+		return new HashSet<String>(appContext.feeds());
+	}
+	
 	@POST
 	@Path("/{feed}")
 	/**
@@ -36,20 +57,12 @@ public class FeedsApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
 	public Response feedsFeedPost(@PathParam("feed") String feed, List<Article> articles) {
+		if(!appContext.feeds().contains(feed)) {
+			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("Feed " + feed + " not found")).build();
+		}
+		appContext.articles().get(feed).addAll(articles);
 		return Response.ok().build();
 	}
 
-	@GET
-	/**
-    @ApiOperation(value = "", notes = "returns list of defined feeds (not req)", response = String.class, responseContainer = "List", tags={  })
-    @ApiResponses(value = { 
-        @ApiResponse(code = 200, message = "return list of feeds", response = String.class, responseContainer = "List"),
-        @ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
-	 */
-	public List<String> feedsGet() {
-		List<String> feeds = new ArrayList<>();
-		feeds.add("feed1");
-		return feeds;
-	}
 }
 

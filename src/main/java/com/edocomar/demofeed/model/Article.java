@@ -7,6 +7,14 @@ public class Article   {
 	private String title = null;
 	private String content = null;
 
+	public Article() {
+	}
+
+	public Article(String title, String content) {
+		this.title = title;
+		this.content = content;
+	}
+	
     @JsonProperty
 	public String getTitle() {
 		return title;
