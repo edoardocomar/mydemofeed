@@ -28,7 +28,7 @@ import com.edocomar.demofeed.model.ErrorMessage;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class SubscriptionsApi  {
-	@SuppressWarnings("unused")
+	
 	private static final Logger logger = LoggerFactory.getLogger(SubscriptionsApi.class);
 	
 	private final AppBackend backend;
@@ -38,7 +38,6 @@ public class SubscriptionsApi  {
 	}
 	
 	@GET
-	@Path("/")
 	/**
     @ApiOperation(value = "", notes = "returns list of known users (was not a req)", response = String.class, responseContainer = "List", tags={  })
     @ApiResponses(value = { 
@@ -46,6 +45,7 @@ public class SubscriptionsApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
 	 */
 	public Set<String> usersGet() {
+    	logger.debug("GET /subscriptions");
 		Set<String> users = backend.subscriptions().keySet();
 		// the set will be iterated over when serialized
 		// and it is subject to be modified by other threads 
@@ -64,6 +64,7 @@ public class SubscriptionsApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
 	public Response subscriptionsUserFeedPost(@PathParam("user") String user,@PathParam("feed") String feed) throws Exception {
+    	logger.debug("POST /subscriptions/"+user+"/"+feed);
 		if (!backend.config().availableFeeds().contains(feed)) {
 			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("Feed " + feed + " not found")).build();
 		}
@@ -100,6 +101,7 @@ public class SubscriptionsApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
 	public Response subscriptionsUserFeedDelete(@PathParam("user") String user,@PathParam("feed") String feed) throws Exception {
+    	logger.debug("DELETE /subscriptions/"+user+"/"+feed);
 		// unsynchronized check-and-act is ok here
 		// it's ok for the set to become non-null later
 		Set<String> userFeeds = backend.subscriptions().get(user);
@@ -126,6 +128,7 @@ public class SubscriptionsApi  {
 			@ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
 	 */
 	public Collection<String> subscriptionsUserGet(@PathParam("user") String user) {
+    	logger.debug("GET /subscriptions/"+user);
 		Set<String> userFeeds = backend.subscriptions().get(user);
 		if (userFeeds==null) {
 			Response response = Response.status(Status.NOT_FOUND).entity(new ErrorMessage("User " + user + " not found")).build();

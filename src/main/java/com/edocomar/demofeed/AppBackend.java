@@ -37,4 +37,9 @@ public interface AppBackend {
 	 * @see #subscriptions()
 	 */
 	void persistSubscriptions() throws Exception;
+
+	/**
+	 * closes any resources
+	 */
+	void shutdown() throws Exception;
 }

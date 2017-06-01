@@ -23,6 +23,7 @@ public class AppMain {
 	private static final Logger logger = LoggerFactory.getLogger(AppMain.class);	
 	private static AppMain instance;
 	private Server jettyServer;
+	private AppBackend backend;
 
 	/**
 	 * @param args[0] propertiesFilename (mandatory)
@@ -65,17 +66,19 @@ public class AppMain {
 	 * shutdown hook usable for testing
 	 * @throws Exception
 	 */
-	static void shutdown() throws Exception {
+	static synchronized void shutdown() throws Exception {
 		logger.warn("Shutdown received");
 		if(instance!=null) {
 			instance.jettyServer.stop();
 			instance.jettyServer.destroy();
 			instance.jettyServer.join();
+			instance.backend.shutdown();
+			instance=null;
 		}
 	}
 
 	public AppMain (AppBackend backend) throws Exception { 
-
+		this.backend = backend;
 		RootResource rootResource = new RootResource();
 		ArticlesApi articlesApi = new ArticlesApi(backend);
 		FeedsApi feedsApi = new FeedsApi(backend);

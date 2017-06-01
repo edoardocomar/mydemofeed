@@ -4,4 +4,10 @@
        <Method name="subscriptionsUserFeedPost" />
        <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER" />
  </Match>
+ <Match>
+       <Class name="com.edocomar.demofeed.util.Utils" />
+       <Method name="storeProps" />
+       <Bug pattern="DM_DEFAULT_ENCODING" />
+ </Match>
+ 
 </FindBugsFilter>

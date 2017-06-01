@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -149,10 +150,16 @@ public class KafkaBackend extends AbstractBackend {
 		});
 	}
 
+	@Override
+	public void shutdown() throws InterruptedException {
+		singleThreadExecutor.shutdown();
+		singleThreadExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+	}
+	
 	private void loadPersistedSubscriptions() throws Exception {
 		File persistentFile = persistentFile();
-		if (!persistentFile.exists()) {
-			logger.warn("Persistent file not found: " + persistentFile());
+		if (!persistentFile.exists() || persistentFile.length()==0) {
+			logger.warn("Persistent file not found or empty: " + persistentFile());
 			logger.warn("Starting application with empty subscriptions");
 			return;
 		}

@@ -73,7 +73,7 @@ public class AppMainInMemoryHttpTest {
 	}
 	
 	@Test(timeout=10000)
-	public void testRootResource() throws Exception {
+	public void testInMemRootResource() throws Exception {
 		GetRequest getRequest = Unirest.get(BASEURI);
 		HttpResponse<String> response = getRequest.asString();
 		assertEquals(200, response.getStatus());
@@ -81,7 +81,7 @@ public class AppMainInMemoryHttpTest {
 	}
 
 	@Test(timeout=10000)
-	public void testFeedsGetApi() throws Exception {
+	public void testInMemFeedsGetApi() throws Exception {
 		GetRequest getRequest = Unirest.get(BASEURI + "/feeds");
 		HttpResponse<String> response = getRequest.asString();
 		assertEquals(200, response.getStatus());
@@ -93,7 +93,7 @@ public class AppMainInMemoryHttpTest {
 	}
 	
 	@Test(timeout=10000)
-	public void testSubscriptionsAndFeeds() throws Exception {
+	public void testInMemSubscriptionsAndFeeds() throws Exception {
 		// create 4 subscriptions, 2 for user1 and 2 for user2
 		{
 			RequestBodyEntity postRequest = Unirest.post(BASEURI + "/subscriptions" + "/user1/feed1")
@@ -146,11 +146,33 @@ public class AppMainInMemoryHttpTest {
 			assertEquals(new HashSet(Arrays.asList("feed1","feed2")), readValue);
 		}
 		
+		// check subscriptions for unknown user 404
+		{
+			GetRequest getRequest = Unirest.get(BASEURI + "/subscriptions/userX");
+			HttpResponse<String> response = getRequest.asString();
+			assertEquals(404, response.getStatus());
+			assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().get("Content-Type").get(0));
+		}
+
 		// remove feed1 from user1
 		{
 			HttpRequestWithBody deleteRequest = Unirest.delete(BASEURI + "/subscriptions/user1/feed1");
 			HttpResponse<String> response = deleteRequest.asString();
 			assertEquals(200, response.getStatus());
+		}
+
+		// check deletion of feed1 again 404
+		{
+			HttpRequestWithBody deleteRequest = Unirest.delete(BASEURI + "/subscriptions/user1/feed1");
+			HttpResponse<String> response = deleteRequest.asString();
+			assertEquals(404, response.getStatus());
+		}
+
+		// check deletion of unknown user unknown sub 404
+		{
+			HttpRequestWithBody deleteRequest = Unirest.delete(BASEURI + "/subscriptions/userX/feed1");
+			HttpResponse<String> response = deleteRequest.asString();
+			assertEquals(404, response.getStatus());
 		}
 
 		// check feed1 has been removed from user1
@@ -162,6 +184,17 @@ public class AppMainInMemoryHttpTest {
 
 			Set<String> readValue = new ObjectMapper().readValue(response.getBody(), Set.class);
 			assertEquals(new HashSet(Arrays.asList("feed2")), readValue);
+		}
+
+		// remove feed2 from user1 and check can't consume as empty subscriptions
+		{
+			HttpRequestWithBody deleteRequest = Unirest.delete(BASEURI + "/subscriptions/user1/feed2");
+			HttpResponse<String> response = deleteRequest.asString();
+			assertEquals(200, response.getStatus());
+
+			GetRequest getRequest = Unirest.get(BASEURI + "/articles/user1");
+			HttpResponse<String> getResponse = getRequest.asString();
+			assertEquals(404, getResponse.getStatus());
 		}
 
 		// check can't subscribe user to non-existing feed

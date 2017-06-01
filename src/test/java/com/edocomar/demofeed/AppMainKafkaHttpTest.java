@@ -4,10 +4,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 
@@ -19,6 +20,7 @@ import org.junit.Test;
 import com.edocomar.demofeed.model.Article;
 import com.edocomar.demofeed.model.FeedArticles;
 import com.edocomar.demofeed.util.RootResource;
+import com.edocomar.demofeed.util.Utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
@@ -32,27 +34,35 @@ import com.mashape.unirest.request.body.RequestBodyEntity;
  * 
  * @author ecomar
  */
+@SuppressWarnings({"unchecked","rawtypes"})
 public class AppMainKafkaHttpTest {
 
-	static File propFile;
 	static final String BASEURI = "http://localhost:8081";
+	static File persistFile;
+	static File propFile;
 	
 	@BeforeClass
 	public static void setUp() throws Exception {
+		persistFile = File.createTempFile("AppMainKafkaHttpTest", "json");
 		Properties props = new Properties();
 		props.put("appmain.port","8081");
 		props.put("predefined.feeds","feed1,feed2");
-		propFile = File.createTempFile("AppMainTest", "properties");
-		
-		try (FileWriter fw = new FileWriter(propFile)) {
-			props.store(fw, "AppMainHttpTest2");
-		}
-		AppMain.main(new String[]{ propFile.getAbsolutePath()});
+		props.put("subscriptions.filename", persistFile.getAbsolutePath());
 
+		propFile = File.createTempFile("AppMainKafkaHttpTest", "properties");
+		propFile.deleteOnExit();
+		persistFile.deleteOnExit();
+		Utils.storeProps(props, propFile);
+
+		AppMain.main(new String[]{ propFile.getAbsolutePath()});
+		waitForStarted(10000L);
+	}
+
+	private static void waitForStarted(long timeoutms) throws InterruptedException {
 		final long startTime = System.currentTimeMillis();
 		while(!AppMain.isStarted()) {
 			Thread.sleep(100L);
-			if (System.currentTimeMillis()-startTime > 10000L){
+			if (System.currentTimeMillis()-startTime > timeoutms){
 				Assert.fail("Timeout");
 			}
 		}
@@ -60,15 +70,11 @@ public class AppMainKafkaHttpTest {
 	
 	@AfterClass
 	public static void tearDown() throws Exception {
-		try {
-			AppMain.shutdown();
-		} finally {
-			propFile.delete();
-		}
+		AppMain.shutdown();
 	}
 	
-	@Test(timeout=10000)
-	public void testSubscribeProduceConsume() throws Exception {
+	@Test(timeout=20000)
+	public void testKafkaSubscribeProduceConsumeRestart() throws Exception {
 		{
 		GetRequest getRequest = Unirest.get(BASEURI);
 		HttpResponse<String> response = getRequest.asString();
@@ -112,6 +118,23 @@ public class AppMainKafkaHttpTest {
 			assertEquals(1, readValue.size());
 			assertEquals("feed1", readValue.get(0).getFeed());
 			assertEquals(articlesPosted, readValue.get(0).getArticles());
+		}
+		
+		//shutdown and restart - test persistence of subscriptions
+		{
+			AppMain.shutdown();
+			Thread.sleep(1000L);//empirical pause for port to be available again
+			AppMain.main(new String[]{ propFile.getAbsolutePath()});
+			waitForStarted(10000L);
+
+			// check subscriptions for user3
+			GetRequest getRequest = Unirest.get(BASEURI + "/subscriptions/user3");
+			HttpResponse<String> response = getRequest.asString();
+			assertEquals(200, response.getStatus());
+			assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().get("Content-Type").get(0));
+
+			Set<String> readValue = new ObjectMapper().readValue(response.getBody(), Set.class);
+			assertEquals(new HashSet(Arrays.asList("feed1")), readValue);
 		}
 	}
 }

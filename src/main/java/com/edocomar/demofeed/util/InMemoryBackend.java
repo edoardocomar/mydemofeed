@@ -59,6 +59,11 @@ public class InMemoryBackend extends AbstractBackend {
 
 	@Override
 	public void persistSubscriptions() {
-		// do nothing on purpose
+		// nothing to do
+	}
+
+	@Override
+	public void shutdown() {
+		// nothing to do
 	}
 }

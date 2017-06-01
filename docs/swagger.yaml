@@ -52,13 +52,13 @@ paths:
           description: user or feed does not exist
         '500':
           description: Unexpected Error
-  /subscriptions:
+  /subscriptions/:
     get:
       description: returns list of known users
-        (not req)
+        (was not a req)
       responses:
         '200':
-          description: return list of feeds
+          description: return list of known users
           schema:
             type: array
             items:
@@ -88,7 +88,7 @@ paths:
   /feeds:
     get:
       description: returns list of defined feeds
-        (not req)
+        (was not a req)
       responses:
         '200':
           description: return list of feeds

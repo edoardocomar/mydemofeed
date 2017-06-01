@@ -25,7 +25,6 @@ import com.edocomar.demofeed.model.ErrorMessage;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class FeedsApi  {
-	@SuppressWarnings("unused")
 	private static final Logger logger = LoggerFactory.getLogger(FeedsApi.class);
 	private final AppBackend backend;	
 
@@ -42,6 +41,7 @@ public class FeedsApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
 	 */
 	public Set<String> feedsGet() {
+    	logger.debug("GET /feeds ");
 		return backend.config().availableFeeds();
 	}
 	
@@ -56,6 +56,7 @@ public class FeedsApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
 	public Response feedsFeedPost(@PathParam("feed") String feed, List<Article> articles) throws Exception {
+    	logger.debug("POST /feeds/" + feed + " articles.size="+articles.size());
 		if(!backend.config().availableFeeds().contains(feed)) {
 			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("Feed " + feed + " not found")).build();
 		}

@@ -26,7 +26,6 @@ import com.edocomar.demofeed.model.FeedArticles;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class ArticlesApi  {
-	@SuppressWarnings("unused")
 	private static final Logger logger = LoggerFactory.getLogger(ArticlesApi.class);
 
 	private AppBackend backend;	
@@ -46,6 +45,7 @@ public class ArticlesApi  {
 	 */
 	@Produces(MediaType.APPLICATION_JSON)
 	public Collection<FeedArticles> articlesUserGet(@PathParam("user") String user) throws Exception {
+    	logger.debug("GET /articles/" + user);
 		
 		Set<String> userFeeds = backend.subscriptions().get(user);
 		if (userFeeds == null) {
