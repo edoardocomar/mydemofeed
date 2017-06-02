@@ -115,9 +115,17 @@ public class AppMainKafkaHttpTest {
 			ObjectMapper om = new ObjectMapper();
 			List<FeedArticles> readValue = om.readValue(response.getBody(), 
 					om.getTypeFactory().constructCollectionType(List.class, FeedArticles.class));
+			// on a slow machine the first read MAY miss to consume. Allow for one retry
+			if(readValue.size()==0) {
+				response = Unirest.get(BASEURI + "/articles/user3").asString();
+				readValue = om.readValue(response.getBody(), 
+						om.getTypeFactory().constructCollectionType(List.class, FeedArticles.class));
+			}
+			
 			assertEquals(1, readValue.size());
 			assertEquals("feed1", readValue.get(0).getFeed());
-			assertEquals(articlesPosted, readValue.get(0).getArticles());
+			assertTrue(""+readValue.get(0) + "\n must contain\n" + articlesPosted,
+					readValue.get(0).getArticles().containsAll(articlesPosted));
 		}
 		
 		//shutdown and restart - test persistence of subscriptions
