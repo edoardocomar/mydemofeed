@@ -27,7 +27,6 @@ public class AppConfig {
 	}
 	
 	private void validate() throws RuntimeException{
-		//TODO validate other values
 		getPort();
 		availableFeeds();
 	}

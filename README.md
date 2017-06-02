@@ -1,15 +1,18 @@
 # mydemofeed app
 
 ## Prerequisites
-* JVM (tested with JDK 1.8.0_131 on macOS)
+* Java 8 (tested with JDK 1.8.0_131 on macOS)
 * Gradle (tested with Gradle 3.4.1)
 * Kafka installation (tested with 0.10.2.1 for Scala 2.12)
 
 ## Build, test
 1. `gradle build`
-1. `gradle test` runs two integration tests using ports 8081 and 8082 
-one with an in-memory backend and one assuming Kafka running
-with default settings on localhost:9092 (plaintext) 
+1. `gradle test` runs two integration tests  
+* using ports 8081 and 8082 
+* one with an in-memory backend 
+* one expecting local Kafka running
+with default settings  
+(localhost:9092 plaintext) 
 
 ## installation, execution
 1. `gradle installDist`
@@ -81,21 +84,25 @@ A more sophisticated API could be asynchronous, returning a URI to check progres
  can provide the current feedset for every user
 * Another option is to simply persist the full serialized map, either in a topic or on the filesystem or in a database.
 * I chose local filesystem persistence with custom json serialization as it was easy :-)
+* TBD encapsulate the addition of ConcurrentSet to the ConcurrentHashMap
 
 ### Development iterations
 1. Gradle project definition with Main class that starts Jetty with Jersey (JAX-RS) component
-2. Design of the REST API with swagger and generation of interfaces.
-3. Implementation of the REST API backed by an in-memory data model
+1. Design of the REST API with swagger and generation of interfaces.
+1. Implementation of the REST API backed by an in-memory data model
 and junit-testing of the HTTP calls.
 This phase wasted an unexpected amount of time as I encountered unexpected errors in
 serializing the collections of POJOs. 
 (MessageBodyWriter not found for media type=application/json, type=class java.util.ArrayList)
 It turned out to be a bad choice of dependencies - a mix of org.glassfish.jersey and com.fasterxm.jackson
 libraries 
-4. Storing POSTed articles with kafka producers
-5. Consumption of articles with kafka consumers
-6. Persistence of the subscriptions
-7. Pooling of Kafka producers (NOT DONE)
-8. Pooling of the consumers (NOT DONE)
+1. Storing POSTed articles with kafka producers
+1. Consumption of articles with kafka consumers
+1. Persistence of subscriptions
+1. Encapsulation of subscriptions ConcurrentHashMap (TODO)
+1. Pooling of Kafka producers (NOT DONE)
+1. Pooling of the consumers (NOT DONE)
+1. Add monitoring (Joking...)
+1. Load & Leak testing (Joking...)
 
 

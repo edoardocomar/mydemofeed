@@ -32,6 +32,7 @@ public class SubscriptionsSerde {
 		for (int i=0; i<jarr.length(); i++) {
 			JSONObject jo = (JSONObject) jarr.get(i);
 			String user = (String) jo.get("user");
+			// TODO encapsulate the ConcurrentHashMap 
 			subs.put(user, ConcurrentHashMap.newKeySet());
 			JSONArray userFeeds = (JSONArray) jo.get("feeds");
 			for (int j=0; j<userFeeds.length(); j++) {

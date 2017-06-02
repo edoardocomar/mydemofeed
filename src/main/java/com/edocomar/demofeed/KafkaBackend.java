@@ -67,8 +67,9 @@ public class KafkaBackend extends AbstractBackend {
 
 			logger.debug("consumer subscribed to " + userFeeds);
 			ObjectMapper om = new ObjectMapper();
-			// TODO ensure consumer is not returning 0 CRs because it's not ready. 
-			// at the moment can control this with the pollTimeout parameter
+			// to ensure consumer is not returning 0 CRs because it's not ready. 
+			// I am using a slightly high the pollTimeout parameter
+			// this will make requests slow when no data is available
 			ConsumerRecords<String, String> crsPolled = consumer.poll(pollTimeout);
 			logger.info("consumer polled records count=" + crsPolled.count());
 			
@@ -109,9 +110,9 @@ public class KafkaBackend extends AbstractBackend {
 
 	private Properties newProducerProps() {
 		Properties clientProps = new Properties();
-		//TODO pick all properties from config file
+		//TODO read any producer properties from config file
 		clientProps.put("bootstrap.servers", config().getProperty("bootstrap.servers", "localhost:9092"));
-		// TODO ArticleSerializer
+		// TODO ArticleSerializer as improvement
 		clientProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer") ; 
 		clientProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		return clientProps;
@@ -119,10 +120,10 @@ public class KafkaBackend extends AbstractBackend {
 
 	private Properties newConsumerProps(String user) {
 		Properties clientProps = new Properties();
-		//TODO pick all properties from config file
+		//TODO read any consumer properties from config file
 		clientProps.put("bootstrap.servers", config().getProperty("bootstrap.servers", "localhost:9092"));
 		clientProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-		// TODO ArticleDeserializer
+		// TODO ArticleDeserializer as improvement
 		clientProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
 		clientProps.put("enable.auto.commit", "true");  
 		clientProps.put("auto.offset.reset", "earliest");

@@ -19,6 +19,7 @@ public abstract class AbstractBackend implements AppBackend {
 		return config;
 	}
 
+	// TODO encapsulate the ConcurrentHashMap 
 	@Override
 	public ConcurrentMap<String, Set<String>> subscriptions() {
 		return subscriptions;

@@ -76,7 +76,8 @@ public class SubscriptionsApi  {
 		// Note that this is flagged by Findbugs as JLM_JSR166_UTILCONCURRENT_MONITORENTER
 		synchronized(subscriptions) {
 			if (!subscriptions.containsKey(user)) {
-				//this is a trick to create a ConcurrentSet which is class missing from java.util package  
+				//this is a trick to create a ConcurrentSet which is class missing from java.util package
+				// TODO encapsulate the ConcurrentHashMap 
 				subscriptions.put(user, ConcurrentHashMap.newKeySet());
 			} 
 		}
