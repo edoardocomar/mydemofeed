@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.edocomar.demofeed.api.ArticlesApi;
 import com.edocomar.demofeed.api.FeedsApi;
 import com.edocomar.demofeed.api.SubscriptionsApi;
+import com.edocomar.demofeed.util.InMemoryBackend;
 
 /**
  * Main class starting an embedded Jetty Server.

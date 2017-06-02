@@ -24,4 +24,6 @@ public interface AppBackend {
 	Collection<FeedArticles> articlesFor(String user, Set<String> userFeeds) throws Exception;
 
 	void postArticles(String feed, List<Article> articles) throws Exception;
+
+	void persistSubscriptions() throws Exception;
 }

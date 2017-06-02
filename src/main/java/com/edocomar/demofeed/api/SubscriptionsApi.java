@@ -62,7 +62,7 @@ public class SubscriptionsApi  {
         @ApiResponse(code = 400, message = "Feed does not exist", response = void.class),
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
-	public Response subscriptionsUserFeedPost(@PathParam("user") String user,@PathParam("feed") String feed) {
+	public Response subscriptionsUserFeedPost(@PathParam("user") String user,@PathParam("feed") String feed) throws Exception {
 		if (!backend.config().availableFeeds().contains(feed)) {
 			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("Feed " + feed + " not found")).build();
 		}
@@ -81,6 +81,7 @@ public class SubscriptionsApi  {
 		// this is a ConcurrentSet, can be modified without synch 
 		Set<String> userFeeds = subscriptions.get(user);
 		if (userFeeds.add(feed)) {
+			backend.persistSubscriptions();
 			return Response.status(Status.CREATED).build();
 		} else {
 			return Response.ok().build();
@@ -96,7 +97,7 @@ public class SubscriptionsApi  {
         @ApiResponse(code = 404, message = "user or feed does not exist", response = void.class),
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
-	public Response subscriptionsUserFeedDelete(@PathParam("user") String user,@PathParam("feed") String feed) {
+	public Response subscriptionsUserFeedDelete(@PathParam("user") String user,@PathParam("feed") String feed) throws Exception {
 		// unsynchronized check-and-act is ok here
 		// it's ok for the set to become non-null later
 		Set<String> userFeeds = backend.subscriptions().get(user);
@@ -106,6 +107,7 @@ public class SubscriptionsApi  {
 		
 		// this is a ConcurrentSet, can be modified without synch 
 		if (userFeeds.remove(feed)) {
+			backend.persistSubscriptions();
 			return Response.ok().build();
 		} else {
 			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("User " + user + " not subscribed to " + feed)).build();

@@ -1,5 +1,8 @@
 package com.edocomar.demofeed;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -7,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
@@ -23,28 +28,24 @@ import org.slf4j.LoggerFactory;
 
 import com.edocomar.demofeed.model.Article;
 import com.edocomar.demofeed.model.FeedArticles;
+import com.edocomar.demofeed.util.SubscriptionsSerde;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class KafkaBackend extends AbstractBackend {
 	private static final Logger logger = LoggerFactory.getLogger(KafkaBackend.class);
-
-	public KafkaBackend(AppConfig config) {
+	
+	private ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+	
+	public KafkaBackend(AppConfig config) throws Exception {
 		super(config);
 		//TODO validate config for fail-fast
+		loadSubscriptions();
 	}
+
 
 	@Override
 	public Collection<FeedArticles> articlesFor(String user, Set<String> userFeeds) throws Exception {
-		Properties clientProps = new Properties();
-		//TODO pick all properties from config file
-		clientProps.put("bootstrap.servers", config().getProperty("bootstrap.servers", "localhost:9092"));
-		clientProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer") ; 
-		clientProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-		clientProps.put("enable.auto.commit", "true");  
-		clientProps.put("auto.offset.reset", "earliest");
-		clientProps.put("fetch.max.bytes", config().getProperty("fetch.max.bytes","4194304")); //4MB
-		clientProps.put("group.id", user); 
-
+		Properties clientProps = newConsumerProps(user); 
 		long pollTimeout = Long.parseLong(config().getProperty("consumer.poll.timeout.ms","2000"));
 		Map<String,FeedArticles> result = new HashMap<>();
 
@@ -65,9 +66,11 @@ public class KafkaBackend extends AbstractBackend {
 
 			logger.info("consumer subscribed to " + userFeeds);
 			ObjectMapper om = new ObjectMapper();
-			// TODO ensure consumer is not returning 0 CRs because it's not ready 
+			// TODO ensure consumer is not returning 0 CRs because it's not ready. 
+			// at the moment can control this with the pollTimeout parameter
 			ConsumerRecords<String, String> crsPolled = consumer.poll(pollTimeout);
 			logger.info("polled records count=" + crsPolled.count());
+			
 			for (ConsumerRecord<String, String> cr : crsPolled) {
 				String feed = cr.topic();
 				Article article = om.readValue(cr.value(), Article.class);
@@ -81,13 +84,10 @@ public class KafkaBackend extends AbstractBackend {
 		return result.values();
 	}
 
+
 	@Override
 	public void postArticles(String feed, List<Article> newArticles) throws Exception {
-		Properties clientProps = new Properties();
-		//TODO pick all properties from config file
-		clientProps.put("bootstrap.servers", config().getProperty("bootstrap.servers", "localhost:9092"));
-		clientProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer") ; 
-		clientProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+		Properties clientProps = newProducerProps();
 
 		List<Future<RecordMetadata>> futures = new ArrayList<>();
 		
@@ -106,4 +106,62 @@ public class KafkaBackend extends AbstractBackend {
 	}
 
 
+	private Properties newProducerProps() {
+		Properties clientProps = new Properties();
+		//TODO pick all properties from config file
+		clientProps.put("bootstrap.servers", config().getProperty("bootstrap.servers", "localhost:9092"));
+		// TODO ArticleSerializer
+		clientProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer") ; 
+		clientProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+		return clientProps;
+	}
+
+	private Properties newConsumerProps(String user) {
+		Properties clientProps = new Properties();
+		//TODO pick all properties from config file
+		clientProps.put("bootstrap.servers", config().getProperty("bootstrap.servers", "localhost:9092"));
+		clientProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+		// TODO ArticleDeserializer
+		clientProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+		clientProps.put("enable.auto.commit", "true");  
+		clientProps.put("auto.offset.reset", "earliest");
+		clientProps.put("fetch.max.bytes", config().getProperty("fetch.max.bytes","4194304")); //4MB
+		clientProps.put("group.id", user);
+		return clientProps;
+	}
+
+	/**
+	 * asynchronous implementations that queues request to save
+	 * errors will only be logged 
+	 */
+	@Override
+	public void persistSubscriptions() throws Exception {
+		singleThreadExecutor.submit( new Runnable() {
+			@Override
+			public void run() {
+				try(FileOutputStream fos = new FileOutputStream(persistentFile())) { 
+					new SubscriptionsSerde().write(subscriptions(), fos);
+				} catch (Exception e) {
+					logger.error("Failed to store subscribtions", e);
+				}
+			}
+		});
+	}
+
+	private void loadSubscriptions() throws Exception {
+		File persistentFile = persistentFile();
+		if (!persistentFile.exists()) {
+			logger.warn("Persistent file not found " + persistentFile());
+			return;
+		}
+		
+		try (FileInputStream fis = new FileInputStream(persistentFile)) {
+			new SubscriptionsSerde().readInto(subscriptions(), fis);
+		}
+	}
+
+	private File persistentFile() {
+		String filename = config().getProperty("subscriptions.filename", System.getProperty("user.home") + "/.mydemofeed-subscriptions.json");
+		return new File(filename);
+	}
 }

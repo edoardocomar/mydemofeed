@@ -60,24 +60,27 @@ public class AppMainKafkaHttpTest {
 	}
 	
 	@Test(timeout=10000)
-	public void testRootResource() throws Exception {
+	public void testSubscribeProduceConsume() throws Exception {
+		{
 		GetRequest getRequest = Unirest.get(BASEURI);
 		HttpResponse<String> response = getRequest.asString();
 		assertEquals(200, response.getStatus());
 		assertEquals(RootResource.BODY, response.getBody());
-	}
+		}
 
-	@Test(timeout=10000)
-	public void testSubscriptionsPostFeedsPost() throws Exception {
+		//create a subscription
 		{
 			RequestBodyEntity postRequest = Unirest.post(BASEURI + "/subscriptions" + "/user3/feed1")
 					.header("Content-Type", MediaType.APPLICATION_JSON)
 					.body("");
 			HttpResponse<String> response = postRequest.asString();
-			assertTrue(response.getStatus()==201);
+			assertTrue(""+response.getStatus(), response.getStatus()==201 || response.getStatus()==200);
 		}
 		
-		List<Article> articlesPosted = Arrays.asList(new Article("title1","content1"),new Article("title2","content2"));
+		//post articles with unique content
+		long now = System.currentTimeMillis();
+		List<Article> articlesPosted = Arrays.asList(new Article("title1","content1-"+now),
+				new Article("title2","content2-"+now));
 		{
 			ObjectMapper om = new ObjectMapper();
 			String body = om.writeValueAsString(articlesPosted);
@@ -87,19 +90,8 @@ public class AppMainKafkaHttpTest {
 			HttpResponse<String> response = postRequest.asString();
 			assertEquals(200, response.getStatus());
 		}
-	}
 
-	@Test(timeout=100000)
-	public void testSubscriptionsPostArticlesGet() throws Exception {
-		List<Article> articlesPosted = Arrays.asList(new Article("title1","content1"),new Article("title2","content2"));
-		{
-			RequestBodyEntity postRequest = Unirest.post(BASEURI + "/subscriptions" + "/user3/feed1")
-					.header("Content-Type", MediaType.APPLICATION_JSON)
-					.body("");
-			HttpResponse<String> response = postRequest.asString();
-			assertTrue("response="+response.getStatus(),response.getStatus()==201 || response.getStatus()==200);
-		}
-		
+		//get Articles
 		{
 			GetRequest getRequest = Unirest.get(BASEURI + "/articles/user3");
 			HttpResponse<String> response = getRequest.asString();

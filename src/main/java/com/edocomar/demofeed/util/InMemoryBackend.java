@@ -1,4 +1,4 @@
-package com.edocomar.demofeed;
+package com.edocomar.demofeed.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.edocomar.demofeed.AbstractBackend;
+import com.edocomar.demofeed.AppConfig;
 import com.edocomar.demofeed.model.Article;
 import com.edocomar.demofeed.model.FeedArticles;
 
@@ -54,5 +56,8 @@ public class InMemoryBackend extends AbstractBackend {
 		}
 	}
 
-
+	@Override
+	public void persistSubscriptions() {
+		// do nothing on purpose
+	}
 }
