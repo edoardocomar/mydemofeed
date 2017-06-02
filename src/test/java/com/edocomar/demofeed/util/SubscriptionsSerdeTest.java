@@ -38,7 +38,8 @@ public class SubscriptionsSerdeTest {
 		serde.readInto(subs2, bis);
 		
 		assertEquals(subs, subs2);
-		assertTrue(subs2.values().iterator().next() instanceof ConcurrentHashMap.KeySetView);
+		Set<String> setInstance = subs2.values().iterator().next();
+		assertTrue(""+setInstance.getClass(), setInstance instanceof ConcurrentHashMap.KeySetView);
 	}
 
 }

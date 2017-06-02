@@ -38,8 +38,9 @@ public class SubscriptionsApi  {
 	}
 	
 	@GET
+	@Path("/")
 	/**
-    @ApiOperation(value = "", notes = "returns list of known users (not req)", response = String.class, responseContainer = "List", tags={  })
+    @ApiOperation(value = "", notes = "returns list of known users (was not a req)", response = String.class, responseContainer = "List", tags={  })
     @ApiResponses(value = { 
         @ApiResponse(code = 200, message = "return list of feeds", response = String.class, responseContainer = "List"),
         @ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
@@ -68,9 +69,10 @@ public class SubscriptionsApi  {
 		}
 		
 		ConcurrentMap<String, Set<String>> subscriptions = backend.subscriptions();
-		// check-and-act in synchronized block else if two threads come in with the same user,
-		// there is a race and both may set a new empty set as value
-		// in memory operation will be quick
+		// check-and-act in synchronized block to avoid a race :
+		// if two threads come in with the same user,
+		// without synch both may set a new empty set as value
+		// Note that this is flagged by Findbugs as JLM_JSR166_UTILCONCURRENT_MONITORENTER
 		synchronized(subscriptions) {
 			if (!subscriptions.containsKey(user)) {
 				//this is a trick to create a ConcurrentSet which is class missing from java.util package  

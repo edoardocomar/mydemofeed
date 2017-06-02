@@ -12,6 +12,7 @@ import com.edocomar.demofeed.api.ArticlesApi;
 import com.edocomar.demofeed.api.FeedsApi;
 import com.edocomar.demofeed.api.SubscriptionsApi;
 import com.edocomar.demofeed.util.InMemoryBackend;
+import com.edocomar.demofeed.util.RootResource;
 
 /**
  * Main class starting an embedded Jetty Server.
@@ -29,10 +30,7 @@ public class AppMain {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		if(args.length < 1) {
-			System.err.println("Missing required argument.\nUSAGE: java ... AppMain propertiesFilename [--in-memory] ");
-			System.exit(1);
-		}
+		checkArgs(args);
 		
 		String propFile = args[0];
 		boolean inMemory = (args.length==2 && "--in-memory".equals(args[1])); 
@@ -56,15 +54,23 @@ public class AppMain {
 		instance.start();
 	}
 
+	private static void checkArgs(String[] args) {
+		if(args.length < 1 || args.length >2 || (args.length==2 && !"--in-memory".equals(args[1]))) {
+			System.err.println("USAGE: java ... AppMain propertiesFilename [--in-memory] ");
+			System.exit(1);
+		}
+	}
+
 	/*
 	 * shutdown hook usable for testing
 	 * @throws Exception
 	 */
 	static void shutdown() throws Exception {
-		logger.info("Shutdown received");
+		logger.warn("Shutdown received");
 		if(instance!=null) {
 			instance.jettyServer.stop();
 			instance.jettyServer.destroy();
+			instance.jettyServer.join();
 		}
 	}
 
@@ -88,13 +94,14 @@ public class AppMain {
 		context.setContextPath("/");
 		context.addServlet(holder, "/*");
 
+		logger.info("Jetty server port: "+ backend.config().getPort());
 		jettyServer = new Server(backend.config().getPort());
 		jettyServer.setHandler(context);
 	}
 
     public void start() throws Exception {
-		logger.info("Starting server");
 		jettyServer.start();
+		logger.info("Jetty server started");
 	}
     
     static boolean isStarted() {

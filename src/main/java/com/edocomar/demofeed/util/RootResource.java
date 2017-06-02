@@ -1,4 +1,4 @@
-package com.edocomar.demofeed;
+package com.edocomar.demofeed.util;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;

@@ -21,6 +21,7 @@ import org.junit.Test;
 import com.edocomar.demofeed.model.Article;
 import com.edocomar.demofeed.model.ErrorMessage;
 import com.edocomar.demofeed.model.FeedArticles;
+import com.edocomar.demofeed.util.RootResource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
@@ -28,16 +29,23 @@ import com.mashape.unirest.request.GetRequest;
 import com.mashape.unirest.request.HttpRequestWithBody;
 import com.mashape.unirest.request.body.RequestBodyEntity;
 
+/**
+ * Integration test using the in-memory backend to test the Web API
+ * <p>
+ * Starts Jetty only once for speed.
+ * Implemented a long script-like test to avoid test ordering issues with existing data  
+ * @author ecomar
+ */
 @SuppressWarnings({"unchecked","rawtypes"})
 public class AppMainInMemoryHttpTest {
 
 	static File propFile;
-	static final String BASEURI = "http://localhost:8081";
+	static final String BASEURI = "http://localhost:8082";
 	
 	@BeforeClass
 	public static void setUp() throws Exception {
 		Properties props = new Properties();
-		props.setProperty("appmain.port","8081");
+		props.setProperty("appmain.port","8082");
 		props.setProperty("predefined.feeds","feed1,feed2");
 		propFile = File.createTempFile("AppMainTest", "properties");
 		
@@ -85,20 +93,8 @@ public class AppMainInMemoryHttpTest {
 	}
 	
 	@Test(timeout=10000)
-	public void testSubscriptionsPost404() throws Exception {
-		RequestBodyEntity postRequest = Unirest.post(BASEURI + "/subscriptions" + "/user1/feedX")
-				.header("Content-Type", MediaType.APPLICATION_JSON)
-				.body("");
-		HttpResponse<String> response = postRequest.asString();
-		assertEquals(404, response.getStatus());
-		assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().get("Content-Type").get(0));
-		ErrorMessage readValue = new ObjectMapper().readValue(response.getBody(), ErrorMessage.class);
-		assertTrue(readValue.getMsg().contains("feedX"));
-	}
-	
-	
-	@Test(timeout=10000)
-	public void testSubscriptionsPostDeleteGetApi() throws Exception {
+	public void testSubscriptionsAndFeeds() throws Exception {
+		// create 4 subscriptions, 2 for user1 and 2 for user2
 		{
 			RequestBodyEntity postRequest = Unirest.post(BASEURI + "/subscriptions" + "/user1/feed1")
 					.header("Content-Type", MediaType.APPLICATION_JSON)
@@ -128,6 +124,18 @@ public class AppMainInMemoryHttpTest {
 			assertEquals(201, response.getStatus());
 		}
 		
+		// check subscribed users
+		{
+			GetRequest getRequest = Unirest.get(BASEURI + "/subscriptions");
+			HttpResponse<String> response = getRequest.asString();
+			assertEquals(200, response.getStatus());
+			assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().get("Content-Type").get(0));
+
+			Set<String> readValue = new ObjectMapper().readValue(response.getBody(), Set.class);
+			assertEquals(new HashSet(Arrays.asList("user1","user2")), readValue);
+		}
+		
+		// check subscriptions for user1
 		{
 			GetRequest getRequest = Unirest.get(BASEURI + "/subscriptions/user1");
 			HttpResponse<String> response = getRequest.asString();
@@ -138,12 +146,14 @@ public class AppMainInMemoryHttpTest {
 			assertEquals(new HashSet(Arrays.asList("feed1","feed2")), readValue);
 		}
 		
+		// remove feed1 from user1
 		{
 			HttpRequestWithBody deleteRequest = Unirest.delete(BASEURI + "/subscriptions/user1/feed1");
 			HttpResponse<String> response = deleteRequest.asString();
 			assertEquals(200, response.getStatus());
 		}
 
+		// check feed1 has been removed from user1
 		{
 			GetRequest getRequest = Unirest.get(BASEURI + "/subscriptions/user1");
 			HttpResponse<String> response = getRequest.asString();
@@ -153,18 +163,29 @@ public class AppMainInMemoryHttpTest {
 			Set<String> readValue = new ObjectMapper().readValue(response.getBody(), Set.class);
 			assertEquals(new HashSet(Arrays.asList("feed2")), readValue);
 		}
-	}
-	
-	@Test(timeout=10000)
-	public void testSubscriptionsPostFeedsPostArticlesGetApi() throws Exception {
+
+		// check can't subscribe user to non-existing feed
+		{
+			RequestBodyEntity postRequest = Unirest.post(BASEURI + "/subscriptions" + "/user1/feedX")
+					.header("Content-Type", MediaType.APPLICATION_JSON)
+					.body("");
+			HttpResponse<String> response = postRequest.asString();
+			assertEquals(404, response.getStatus());
+			assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().get("Content-Type").get(0));
+			ErrorMessage readValue = new ObjectMapper().readValue(response.getBody(), ErrorMessage.class);
+			assertTrue(readValue.getMsg(), readValue.getMsg().contains("feedX"));
+		}
+		
+		// subscribe user3
 		{
 			RequestBodyEntity postRequest = Unirest.post(BASEURI + "/subscriptions" + "/user3/feed1")
 					.header("Content-Type", MediaType.APPLICATION_JSON)
 					.body("");
 			HttpResponse<String> response = postRequest.asString();
-			assertTrue(response.getStatus()==201);
+			assertEquals(201,response.getStatus());
 		}
 		
+		// post two articles to feed1
 		List<Article> articlesPosted = Arrays.asList(new Article("title1","content1"),new Article("title2","content2"));
 		{
 			ObjectMapper om = new ObjectMapper();
@@ -176,6 +197,7 @@ public class AppMainInMemoryHttpTest {
 			assertEquals(200, response.getStatus());
 		}
 
+		// retrieve articles for user3
 		{
 			GetRequest getRequest = Unirest.get(BASEURI + "/articles/user3");
 			HttpResponse<String> response = getRequest.asString();

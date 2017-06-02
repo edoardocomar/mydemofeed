@@ -39,7 +39,7 @@ public class KafkaBackend extends AbstractBackend {
 	public KafkaBackend(AppConfig config) throws Exception {
 		super(config);
 		//TODO validate config for fail-fast
-		loadSubscriptions();
+		loadPersistedSubscriptions();
 	}
 
 
@@ -55,21 +55,21 @@ public class KafkaBackend extends AbstractBackend {
 			consumer.subscribe(userFeeds, new ConsumerRebalanceListener() {
 				@Override
 				public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-					logger.info("onPartitionsRevoked " + partitions);
+					logger.debug("consumer onPartitionsRevoked " + partitions);
 				}
 
 				@Override
 				public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-					logger.info("onPartitionsAssigned " + partitions);
+					logger.debug("consumer onPartitionsAssigned " + partitions);
 				}
 			});
 
-			logger.info("consumer subscribed to " + userFeeds);
+			logger.debug("consumer subscribed to " + userFeeds);
 			ObjectMapper om = new ObjectMapper();
 			// TODO ensure consumer is not returning 0 CRs because it's not ready. 
 			// at the moment can control this with the pollTimeout parameter
 			ConsumerRecords<String, String> crsPolled = consumer.poll(pollTimeout);
-			logger.info("polled records count=" + crsPolled.count());
+			logger.info("consumer polled records count=" + crsPolled.count());
 			
 			for (ConsumerRecord<String, String> cr : crsPolled) {
 				String feed = cr.topic();
@@ -141,6 +141,7 @@ public class KafkaBackend extends AbstractBackend {
 			public void run() {
 				try(FileOutputStream fos = new FileOutputStream(persistentFile())) { 
 					new SubscriptionsSerde().write(subscriptions(), fos);
+					logger.debug("Stored persisted subscriptions");
 				} catch (Exception e) {
 					logger.error("Failed to store subscribtions", e);
 				}
@@ -148,16 +149,23 @@ public class KafkaBackend extends AbstractBackend {
 		});
 	}
 
-	private void loadSubscriptions() throws Exception {
+	private void loadPersistedSubscriptions() throws Exception {
 		File persistentFile = persistentFile();
 		if (!persistentFile.exists()) {
-			logger.warn("Persistent file not found " + persistentFile());
+			logger.warn("Persistent file not found: " + persistentFile());
+			logger.warn("Starting application with empty subscriptions");
 			return;
 		}
 		
 		try (FileInputStream fis = new FileInputStream(persistentFile)) {
 			new SubscriptionsSerde().readInto(subscriptions(), fis);
+		} catch (Exception e) {
+			logger.error("FATAL: Failed to deserialize subscribtions from " + persistentFile() +
+					"\n"+e.getMessage()+
+					"\nYou should delete the file and restart from empty.");
+			throw e; 
 		}
+		logger.info("Loaded persisted subscriptions from " + persistentFile + "\n" + subscriptions() + "\n");
 	}
 
 	private File persistentFile() {

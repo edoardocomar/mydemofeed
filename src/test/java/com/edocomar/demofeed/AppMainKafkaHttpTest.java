@@ -18,12 +18,20 @@ import org.junit.Test;
 
 import com.edocomar.demofeed.model.Article;
 import com.edocomar.demofeed.model.FeedArticles;
+import com.edocomar.demofeed.util.RootResource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.request.GetRequest;
 import com.mashape.unirest.request.body.RequestBodyEntity;
 
+/**
+ * Integration testing that expects a running Kafka 
+ * to be available on localhost:9092
+ * with topic auto-creation enabled or pre-created topics
+ * 
+ * @author ecomar
+ */
 public class AppMainKafkaHttpTest {
 
 	static File propFile;

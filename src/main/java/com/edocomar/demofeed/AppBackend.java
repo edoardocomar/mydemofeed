@@ -17,13 +17,24 @@ public interface AppBackend {
 	AppConfig config();
 
 	/**
-	 * @return Map of users to their subscribed feeds
+	 * @return Map of users with their subscribed feeds
 	 */
 	ConcurrentMap<String, Set<String>> subscriptions();
-
+	
+	/**
+	 * @return a collection of articles, grouped in {@linkplain FeedArticles} for the given user
+	 * @param userFeeds the feeds the user is subscribed to
+	 */
 	Collection<FeedArticles> articlesFor(String user, Set<String> userFeeds) throws Exception;
 
+	/**
+	 * stores the given articles in the given feed
+	 */
 	void postArticles(String feed, List<Article> articles) throws Exception;
-
+	
+	/**
+	 * persists the current map of subscriptions
+	 * @see #subscriptions()
+	 */
 	void persistSubscriptions() throws Exception;
 }

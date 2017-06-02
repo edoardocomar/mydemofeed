@@ -22,7 +22,7 @@ public class SubscriptionsSerde {
 			jo.put("feeds", entry.getValue());
 			jarr.put(jo);
 		}
-		os.write(jarr.toString().getBytes());
+		os.write(jarr.toString().getBytes(Charset.defaultCharset()));
 	}
 
 	public void readInto(ConcurrentMap<String, Set<String>>subs, InputStream is) throws Exception {

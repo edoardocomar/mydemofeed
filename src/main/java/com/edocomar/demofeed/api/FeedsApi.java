@@ -36,7 +36,7 @@ public class FeedsApi  {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	/**
-    @ApiOperation(value = "", notes = "returns list of defined feeds (not req)", response = String.class, responseContainer = "List", tags={  })
+    @ApiOperation(value = "", notes = "returns list of defined feeds (was not a req)", response = String.class, responseContainer = "List", tags={  })
     @ApiResponses(value = { 
         @ApiResponse(code = 200, message = "return list of feeds", response = String.class, responseContainer = "List"),
         @ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })

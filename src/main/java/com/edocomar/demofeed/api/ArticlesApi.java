@@ -1,6 +1,7 @@
 package com.edocomar.demofeed.api;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.ws.rs.Consumes;
@@ -40,7 +41,7 @@ public class ArticlesApi  {
     @ApiOperation(value = "", notes = "get list of new articles for feeds a user is subscribed to (required operation", response = FeedArticles.class, responseContainer = "List", tags={  })
     @ApiResponses(value = { 
         @ApiResponse(code = 200, message = "OK", response = FeedArticles.class, responseContainer = "List"),
-        @ApiResponse(code = 404, message = "user does not exist", response = Articles.class, responseContainer = "List"),
+        @ApiResponse(code = 404, message = "user does not exist  or has no feed subscriptions", response = Articles.class, responseContainer = "List"),
         @ApiResponse(code = 500, message = "Unexpected Error", response = Articles.class, responseContainer = "List") })
 	 */
 	@Produces(MediaType.APPLICATION_JSON)
@@ -52,7 +53,15 @@ public class ArticlesApi  {
 			throw new NotFoundException(response);
 		}
 		// userFeeds is a ConcurrentSet so will tolerate asynch changes during iteration 
-		return backend.articlesFor(user, userFeeds);
+		// but it would be a problem if it became empty when we consume,
+		// so we take a snapshot
+		Set<String> userFeedsSnapshot = new HashSet<String>(userFeeds);
+		if (userFeedsSnapshot.isEmpty()) {
+			Response response = Response.status(Status.NOT_FOUND).entity(new ErrorMessage("User " + user + " is not subscribed to any feed")).build();
+			throw new NotFoundException(response);
+		}
+		
+		return backend.articlesFor(user, userFeedsSnapshot);
 	}
 		
 }

@@ -24,7 +24,8 @@ public class InMemoryBackend extends AbstractBackend {
 	public InMemoryBackend(AppConfig config) {
 		super(config);
 		
-		//immutable set of feeds - ensures that articles.get(feed) !=null
+		//set of feeds is immutable, prepopulate articles with empty list
+		//ensures that articles.get(feed) !=null
 		this.articles = new ConcurrentHashMap<String, List<Article>>();
 		for (String feed : config.availableFeeds()) {
 			articles.put(feed, new LinkedList<Article>());
