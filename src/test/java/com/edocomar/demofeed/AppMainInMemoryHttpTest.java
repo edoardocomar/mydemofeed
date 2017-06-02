@@ -29,7 +29,7 @@ import com.mashape.unirest.request.HttpRequestWithBody;
 import com.mashape.unirest.request.body.RequestBodyEntity;
 
 @SuppressWarnings({"unchecked","rawtypes"})
-public class AppMainHttpTest {
+public class AppMainInMemoryHttpTest {
 
 	static File propFile;
 	static final String BASEURI = "http://localhost:8081";
@@ -37,14 +37,14 @@ public class AppMainHttpTest {
 	@BeforeClass
 	public static void setUp() throws Exception {
 		Properties props = new Properties();
-		props.put("appmain.port","8081");
-		props.put("feeds.list","feed1,feed2");
+		props.setProperty("appmain.port","8081");
+		props.setProperty("predefined.feeds","feed1,feed2");
 		propFile = File.createTempFile("AppMainTest", "properties");
 		
 		try (FileWriter fw = new FileWriter(propFile)) {
-			props.store(fw, "testMainStartShutDown");
+			props.store(fw, "AppMainHttpTest");
 		}
-		AppMain.main(new String[]{ propFile.getAbsolutePath()});
+		AppMain.main(new String[]{ propFile.getAbsolutePath(), "--in-memory"});
 
 		final long startTime = System.currentTimeMillis();
 		while(!AppMain.isStarted()) {

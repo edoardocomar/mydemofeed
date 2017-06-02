@@ -23,16 +23,19 @@ public class AppMain {
 	private Server jettyServer;
 
 	/**
-	 * @param args[0] property filename
+	 * @param args[0] propertiesFilename (mandatory)
+	 * @param args[1] "--in-memory" (optional flag for testing)
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		if(args.length != 1) {
-			System.err.println("Missing required argument.\nUSAGE: java ... AppMain propertiesFilename");
+		if(args.length < 1) {
+			System.err.println("Missing required argument.\nUSAGE: java ... AppMain propertiesFilename [--in-memory] ");
 			System.exit(1);
 		}
 		
 		String propFile = args[0];
+		boolean inMemory = (args.length==2 && "--in-memory".equals(args[1])); 
+		if (inMemory) logger.warn("Using in-memory test backend");
 		
 		AppConfig appConfig = new AppConfig(propFile);
 
@@ -46,7 +49,9 @@ public class AppMain {
 			}
 		});
 
-		instance = new AppMain(appConfig);
+		AppBackend backend = inMemory ? new InMemoryBackend(appConfig) : new KafkaBackend(appConfig);
+		
+		instance = new AppMain(backend);
 		instance.start();
 	}
 
@@ -62,14 +67,12 @@ public class AppMain {
 		}
 	}
 
-	public AppMain (AppConfig appConfig) throws Exception { 
+	public AppMain (AppBackend backend) throws Exception { 
 
-		AppContext appContext = new AppContextImpl(appConfig);
-		
 		RootResource rootResource = new RootResource();
-		ArticlesApi articlesApi = new ArticlesApi(appContext);
-		FeedsApi feedsApi = new FeedsApi(appContext);
-		SubscriptionsApi subscriptionsApi = new SubscriptionsApi(appContext);
+		ArticlesApi articlesApi = new ArticlesApi(backend);
+		FeedsApi feedsApi = new FeedsApi(backend);
+		SubscriptionsApi subscriptionsApi = new SubscriptionsApi(backend);
 
 		// construct an embedded Jetty Server with Jersey Jax-RS 
 		ResourceConfig rc = new ResourceConfig();
@@ -84,7 +87,7 @@ public class AppMain {
 		context.setContextPath("/");
 		context.addServlet(holder, "/*");
 
-		jettyServer = new Server(appConfig.getPort());
+		jettyServer = new Server(backend.config().getPort());
 		jettyServer.setHandler(context);
 	}
 

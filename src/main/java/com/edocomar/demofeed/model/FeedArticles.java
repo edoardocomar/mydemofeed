@@ -10,6 +10,12 @@ public class FeedArticles   {
 	private String feed = null;
 	private List<Article> articles = new ArrayList<Article>();
 
+	public FeedArticles() {
+	}
+	public FeedArticles(String feed) {
+		this.feed = feed;
+	}
+	
     @JsonProperty
 	public String getFeed() {
 		return feed;

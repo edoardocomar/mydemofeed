@@ -1,9 +1,9 @@
 package com.edocomar.demofeed.api;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -20,7 +20,7 @@ import javax.ws.rs.core.Response.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.edocomar.demofeed.AppContext;
+import com.edocomar.demofeed.AppBackend;
 import com.edocomar.demofeed.model.ErrorMessage;
 
 
@@ -31,10 +31,10 @@ public class SubscriptionsApi  {
 	@SuppressWarnings("unused")
 	private static final Logger logger = LoggerFactory.getLogger(SubscriptionsApi.class);
 	
-	private final AppContext appContext;
+	private final AppBackend backend;
 	
-	public SubscriptionsApi(AppContext appContext) {
-		this.appContext = appContext;
+	public SubscriptionsApi(AppBackend backend) {
+		this.backend = backend;
 	}
 	
 	@GET
@@ -44,11 +44,12 @@ public class SubscriptionsApi  {
         @ApiResponse(code = 200, message = "return list of feeds", response = String.class, responseContainer = "List"),
         @ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
 	 */
-	public Set<String> subscriptionsGet() {
-		//TODO synch
-		// subscriptions.keySet() it will be iterated over when adding to the list
-		// coming from a concurrent map, the iterator is safe though weakly consistent
-		return new HashSet<String>(appContext.subscriptions().keySet());
+	public Set<String> usersGet() {
+		Set<String> users = backend.subscriptions().keySet();
+		// the set will be iterated over when serialized
+		// and it is subject to be modified by other threads 
+		// As subscriptions is a concurrent map, the iterator is safe though weakly consistent.
+		return users;
 	}
 
 	@POST
@@ -62,22 +63,24 @@ public class SubscriptionsApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
 	public Response subscriptionsUserFeedPost(@PathParam("user") String user,@PathParam("feed") String feed) {
-		if (!appContext.feeds().contains(feed)) {
+		if (!backend.config().availableFeeds().contains(feed)) {
 			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("Feed " + feed + " not found")).build();
 		}
 		
-		boolean created = false;
-		Set<String> userSubs = appContext.subscriptions().get(user);
-		if (userSubs==null) {
-			created = true;
-			userSubs = Collections.synchronizedSet(new HashSet<String>());
-			userSubs.add(feed);
-			appContext.subscriptions().put(user, userSubs);
-		} else {
-			created = userSubs.add(feed);
+		ConcurrentMap<String, Set<String>> subscriptions = backend.subscriptions();
+		// check-and-act in synchronized block else if two threads come in with the same user,
+		// there is a race and both may set a new empty set as value
+		// in memory operation will be quick
+		synchronized(subscriptions) {
+			if (!subscriptions.containsKey(user)) {
+				//this is a trick to create a ConcurrentSet which is class missing from java.util package  
+				subscriptions.put(user, ConcurrentHashMap.newKeySet());
+			} 
 		}
-		
-		if (created) {
+
+		// this is a ConcurrentSet, can be modified without synch 
+		Set<String> userFeeds = subscriptions.get(user);
+		if (userFeeds.add(feed)) {
 			return Response.status(Status.CREATED).build();
 		} else {
 			return Response.ok().build();
@@ -93,13 +96,16 @@ public class SubscriptionsApi  {
         @ApiResponse(code = 404, message = "user or feed does not exist", response = void.class),
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
-	public Response subscriptionsUserFeedDelete(@PathParam("user") String user,@PathParam("feed") String feed) { 
-		Set<String> userSubs = appContext.subscriptions().get(user);
-		if (userSubs==null) {
+	public Response subscriptionsUserFeedDelete(@PathParam("user") String user,@PathParam("feed") String feed) {
+		// unsynchronized check-and-act is ok here
+		// it's ok for the set to become non-null later
+		Set<String> userFeeds = backend.subscriptions().get(user);
+		if (userFeeds==null) {
 			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("User " + user + " not found")).build();
 		}
-		boolean removed = userSubs.remove(feed);
-		if (removed) {
+		
+		// this is a ConcurrentSet, can be modified without synch 
+		if (userFeeds.remove(feed)) {
 			return Response.ok().build();
 		} else {
 			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("User " + user + " not subscribed to " + feed)).build();
@@ -116,13 +122,14 @@ public class SubscriptionsApi  {
 			@ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
 	 */
 	public Collection<String> subscriptionsUserGet(@PathParam("user") String user) {
-		Set<String> userSubs = appContext.subscriptions().get(user);
-		if (userSubs==null) {
+		Set<String> userFeeds = backend.subscriptions().get(user);
+		if (userFeeds==null) {
 			Response response = Response.status(Status.NOT_FOUND).entity(new ErrorMessage("User " + user + " not found")).build();
 			throw new NotFoundException(response);
 		}
-		// SYNCH : the set will be iterated over. 
-		return userSubs;
+
+		// this is a ConcurrentSet so will tolerate asynch changes during iteration 
+		return userFeeds;
 	}
 }
 

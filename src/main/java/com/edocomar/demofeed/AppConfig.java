@@ -34,9 +34,9 @@ public class AppConfig {
 	}
 	
 	private void validate() throws RuntimeException{
-		//TODO validate other
+		//TODO validate other values
 		getPort();
-		getAvailableFeeds();
+		availableFeeds();
 	}
 
 
@@ -46,16 +46,28 @@ public class AppConfig {
 	}
 	
 	public int getPort() {
-		return Integer.parseInt((String)props.getOrDefault("appmain.port", "8080"));
+		return Integer.parseInt(props.getProperty("appmain.port", "8080"));
 	}
 	
-	public Set<String> getAvailableFeeds() {
+	/**
+	 * @return an immutable Set with the predefined feeds
+	 */
+	public Set<String> availableFeeds() {
 		// TODO cache value
-		String csv = (String) props.get("feeds.list");
-		if (csv==null) throw new IllegalArgumentException("missing feeds.list property");
-		if (csv.trim().isEmpty()) throw new IllegalArgumentException("empty feeds.list property");
+		String csv = props.getProperty("predefined.feeds");
+		if (csv==null) throw new IllegalArgumentException("missing predefined.feeds property");
+		if (csv.trim().isEmpty()) throw new IllegalArgumentException("empty predefined.feeds property");
 		String[] split = csv.split(",");
-		if(split.length==0) throw new IllegalArgumentException("empty feeds.list property");
+		if(split.length==0) throw new IllegalArgumentException("empty predefined.feeds property");
 		return Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(split))); 
 	}
+	
+	public String getProperty(String prop) {
+		return props.getProperty(prop);
+	}
+	
+	public String getProperty(String prop, String defaultValue) {
+		return props.getProperty(prop, defaultValue);
+	}
+	
 }

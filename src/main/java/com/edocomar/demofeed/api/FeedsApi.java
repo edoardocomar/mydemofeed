@@ -1,6 +1,5 @@
 package com.edocomar.demofeed.api;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -17,7 +16,7 @@ import javax.ws.rs.core.Response.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.edocomar.demofeed.AppContext;
+import com.edocomar.demofeed.AppBackend;
 import com.edocomar.demofeed.model.Article;
 import com.edocomar.demofeed.model.ErrorMessage;
 
@@ -28,10 +27,10 @@ import com.edocomar.demofeed.model.ErrorMessage;
 public class FeedsApi  {
 	@SuppressWarnings("unused")
 	private static final Logger logger = LoggerFactory.getLogger(FeedsApi.class);
-	private final AppContext appContext;	
+	private final AppBackend backend;	
 
-	public FeedsApi(AppContext appContext) {
-		this.appContext = appContext;
+	public FeedsApi(AppBackend backend) {
+		this.backend = backend;
 	}
 	
 	@GET
@@ -43,7 +42,7 @@ public class FeedsApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = String.class, responseContainer = "List") })
 	 */
 	public Set<String> feedsGet() {
-		return new HashSet<String>(appContext.feeds());
+		return backend.config().availableFeeds();
 	}
 	
 	@POST
@@ -56,11 +55,12 @@ public class FeedsApi  {
         @ApiResponse(code = 404, message = "feed does not exist", response = void.class),
         @ApiResponse(code = 500, message = "Unexpected Error", response = void.class) })
 	 */
-	public Response feedsFeedPost(@PathParam("feed") String feed, List<Article> articles) {
-		if(!appContext.feeds().contains(feed)) {
+	public Response feedsFeedPost(@PathParam("feed") String feed, List<Article> articles) throws Exception {
+		if(!backend.config().availableFeeds().contains(feed)) {
 			return Response.status(Status.NOT_FOUND).entity(new ErrorMessage("Feed " + feed + " not found")).build();
 		}
-		appContext.articles().get(feed).addAll(articles);
+		
+		backend.postArticles(feed,articles);
 		return Response.ok().build();
 	}
 

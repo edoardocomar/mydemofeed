@@ -1,7 +1,6 @@
 package com.edocomar.demofeed.api;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.Set;
 
 import javax.ws.rs.Consumes;
@@ -17,8 +16,7 @@ import javax.ws.rs.core.Response.Status;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.edocomar.demofeed.AppContext;
-import com.edocomar.demofeed.model.Article;
+import com.edocomar.demofeed.AppBackend;
 import com.edocomar.demofeed.model.ErrorMessage;
 import com.edocomar.demofeed.model.FeedArticles;
 
@@ -29,10 +27,11 @@ import com.edocomar.demofeed.model.FeedArticles;
 public class ArticlesApi  {
 	@SuppressWarnings("unused")
 	private static final Logger logger = LoggerFactory.getLogger(ArticlesApi.class);
-	private AppContext appContext;	
 
-	public ArticlesApi(AppContext appContext) {
-		this.appContext = appContext;
+	private AppBackend backend;	
+
+	public ArticlesApi(AppBackend backend) {
+		this.backend = backend;
 	}
 	
 	@GET
@@ -45,24 +44,16 @@ public class ArticlesApi  {
         @ApiResponse(code = 500, message = "Unexpected Error", response = Articles.class, responseContainer = "List") })
 	 */
 	@Produces(MediaType.APPLICATION_JSON)
-	public List<FeedArticles> articlesUserGet(@PathParam("user") String user) {
+	public Collection<FeedArticles> articlesUserGet(@PathParam("user") String user) throws Exception {
 		
-		Set<String> subscriptions = appContext.subscriptions().get(user);
-		if (subscriptions == null) {
+		Set<String> userFeeds = backend.subscriptions().get(user);
+		if (userFeeds == null) {
 			Response response = Response.status(Status.NOT_FOUND).entity(new ErrorMessage("User " + user + " not found")).build();
 			throw new NotFoundException(response);
 		}
-		
-		List<FeedArticles> result = new ArrayList<>();
-		for (String feed : subscriptions) {
-			FeedArticles feedArticles = new FeedArticles();
-			feedArticles.setFeed(feed);
-			List<Article> articles = appContext.articles().get(feed);
-			feedArticles.getArticles().addAll(articles);
-			result.add(feedArticles);
-		}
-
-		return result;
+		// userFeeds is a ConcurrentSet so will tolerate asynch changes during iteration 
+		return backend.articlesFor(user, userFeeds);
 	}
+		
 }
 
